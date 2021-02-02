@@ -18,7 +18,7 @@ class BaseWindow:
     def __init__(self, root):
         self.root = root
         self.root.config()
-        self.root.geometry("1100x500+450+200")
+        self.root.geometry("1100x550+450+200")
         BaseFrame(self.root)
 
 
@@ -29,6 +29,7 @@ class BaseFrame:
         self.root.config(bg='#CCFFFF')
         self.root.title('SPC Control')
         self.base_frame = tkinter.Frame(self.root)
+        self.base_frame.config(bg='#CCFFFF')
         self.base_frame.pack()
         self.cf = Config()
         self._menu()
@@ -36,8 +37,19 @@ class BaseFrame:
 
     def _button(self):
         tables = self.cf.get_all()
+        button_frame1 = tkinter.Frame(self.base_frame)
+        button_frame2 = tkinter.Frame(self.base_frame)
+        button_frame3 = tkinter.Frame(self.base_frame)
+        button_frame1.pack()
+        button_frame2.pack()
+        button_frame3.pack()
         for i in range(len(tables)):
-            self.grlaph_button(tables[i])
+            if i < 5:
+                self.graph_button(button_frame1, tables[i])
+            elif 5 <= i <10:
+                self.graph_button(button_frame2, tables[i])
+            else:
+                self.graph_button(button_frame3, tables[i])
 
     def _menu(self):
         menu = tkinter.Menu(self.root)
@@ -49,20 +61,23 @@ class BaseFrame:
         menu2.add_cascade(label='Delete', menu=menu3)
         tables = self.cf.get_all()
         for i in tables:
-            menu3.add_command(label=i[1], command=lambda:self.del_spc(i))
+            self.menu3_command(menu3, i)
         self.root.config(menu=menu)
 
     def add_spc(self):
         Dialog()
 
+    def menu3_command(self, menu3, table):
+        menu3.add_command(label=table[1], command=lambda: self.del_spc(table))
+
     def del_spc(self, table):
-        answer = messagebox.askyesno('确认提示', f'确定删除{table[1]}？')
+        answer = messagebox.askyesno('确认提示', f'确定删除{table[1]}({table[0]})？')
         if answer:
             self.cf.remove(table[0])
             self.refresh()
 
-    def grlaph_button(self, table):
-        btn = tkinter.Button(self.base_frame, text=table[1], height=10, width=30, command=lambda:self.graphs(table))
+    def graph_button(self, frame, table):
+        btn = tkinter.Button(frame, text=f'{table[1]} ({table[0]})', height=10, width=30, command=lambda:self.graphs(table))
         btn.pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=1)
 
     def graphs(self, table):
@@ -72,7 +87,7 @@ class BaseFrame:
             self.base_frame.destroy()
             LineGraphs(self.root, table)
         except xlrd.biffh.XLRDError:
-            messagebox.showerror(title='错误', message=f'Excel文件中并没有表{table[0]}')
+            messagebox.showerror(title='错误', message=f'Excel文件中并没有表"{table[0]}"')
             self.refresh()
 
     def refresh(self):
