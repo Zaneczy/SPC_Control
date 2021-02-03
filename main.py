@@ -18,13 +18,13 @@ class BaseWindow:
     def __init__(self, root):
         self.root = root
         self.root.config()
-        self.root.geometry("1100x550+450+200")
+        self.root.geometry("1100x575+450+200")
         BaseFrame(self.root)
 
 
 class BaseFrame:
 
-    def __init__(self, root):
+    def __init__(self, root, page=1):
         self.root = root
         self.root.config(bg='#CCFFFF')
         self.root.title('SPC Control')
@@ -32,24 +32,27 @@ class BaseFrame:
         self.base_frame.config(bg='#CCFFFF')
         self.base_frame.pack()
         self.cf = Config()
+        self.page = page
         self._menu()
         self._button()
+        self._page()
 
     def _button(self):
         tables = self.cf.get_all()
+        table_show = tables[0+((self.page-1) * 15):15+((self.page-1) * 15)]
         button_frame1 = tkinter.Frame(self.base_frame)
         button_frame2 = tkinter.Frame(self.base_frame)
         button_frame3 = tkinter.Frame(self.base_frame)
         button_frame1.pack()
         button_frame2.pack()
         button_frame3.pack()
-        for i in range(len(tables)):
+        for i in range(len(table_show)):
             if i < 5:
-                self.graph_button(button_frame1, tables[i])
-            elif 5 <= i <10:
-                self.graph_button(button_frame2, tables[i])
+                self.graph_button(button_frame1, table_show[i])
+            elif i < 10:
+                self.graph_button(button_frame2, table_show[i])
             else:
-                self.graph_button(button_frame3, tables[i])
+                self.graph_button(button_frame3, table_show[i])
 
     def _menu(self):
         menu = tkinter.Menu(self.root)
@@ -64,11 +67,32 @@ class BaseFrame:
             self.menu3_command(menu3, i)
         self.root.config(menu=menu)
 
+    def _page(self):
+        page_frame = tkinter.Frame(self.base_frame)
+        page_frame.pack(side=tkinter.BOTTOM)
+        for i in range(5):
+            if i+1 == self.page:
+                self.page_button_click(page_frame, i+1)
+            else:
+                self.page_button(page_frame, i+1)
+
+    def page_button(self, page_frame, num):
+        page = tkinter.Button(page_frame, text=num, command=lambda:self.change_page(num), width=1, height=1)
+        page.pack(side=tkinter.LEFT)
+
+    def page_button_click(self, page_frame, num):
+        page = tkinter.Button(page_frame, text=num, width=1, height=1, relief='sunken')
+        page.pack(side=tkinter.LEFT)
+
+    def change_page(self, num):
+        self.base_frame.destroy()
+        BaseFrame(self.root, num)
+
     def add_spc(self):
         Dialog()
 
     def menu3_command(self, menu3, table):
-        menu3.add_command(label=table[1], command=lambda: self.del_spc(table))
+        menu3.add_command(label=f'{table[1]}({table[0]})', command=lambda: self.del_spc(table))
 
     def del_spc(self, table):
         answer = messagebox.askyesno('确认提示', f'确定删除{table[1]}({table[0]})？')
@@ -77,7 +101,8 @@ class BaseFrame:
             self.refresh()
 
     def graph_button(self, frame, table):
-        btn = tkinter.Button(frame, text=f'{table[1]} ({table[0]})', height=10, width=30, command=lambda:self.graphs(table))
+        btn = tkinter.Button(frame, text=f'{table[1]} ({table[0]})', command=lambda:self.graphs(table), height=10,
+                             width=30, activebackground='#c8c8c8')
         btn.pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=1)
 
     def graphs(self, table):
@@ -89,6 +114,9 @@ class BaseFrame:
         except xlrd.biffh.XLRDError:
             messagebox.showerror(title='错误', message=f'Excel文件中并没有表"{table[0]}"')
             self.refresh()
+        except:
+            messagebox.showinfo(title='数据出错', message=f'表{table[0]}中的数据不符合格式，请检查')
+            self.refresh()
 
     def refresh(self):
         self.base_frame.destroy()
@@ -98,8 +126,8 @@ class BaseFrame:
 class Dialog:
     def __init__(self):
         self.dialog = tkinter.Toplevel()
-        self.dialog.title('新建视图')
-        self.dialog.geometry("300x100+550+300")
+        self.dialog.title('新建')
+        self.dialog.geometry("220x80+550+300")
         self.setup_UI()
 
     def setup_UI(self):
@@ -107,16 +135,18 @@ class Dialog:
         row1.pack(fill="x")
         tkinter.Label(row1, text='Sheet：', width=8).pack(side=tkinter.LEFT)
         self.sheet = tkinter.StringVar()
+        # self.sheet.set('Sheet')
         tkinter.Entry(row1, textvariable=self.sheet, width=20).pack(side=tkinter.LEFT)
 
         row2 = tkinter.Frame(self.dialog)
         row2.pack(fill="x", ipadx=1, ipady=1)
         tkinter.Label(row2, text='Name：', width=8).pack(side=tkinter.LEFT)
         self.name = tkinter.StringVar()
+        # self.name.set('Name')
         tkinter.Entry(row2, textvariable=self.name, width=20).pack(side=tkinter.LEFT)
 
         row3 = tkinter.Frame(self.dialog)
-        row3.pack(fill="x")
+        row3.pack()
         tkinter.Button(row3, text="确定", command=self.ok).pack(side=tkinter.LEFT)
         tkinter.Button(row3, text="取消", command=self.cancel).pack(side=tkinter.LEFT)
 
