@@ -32,14 +32,14 @@ class BaseFrame:
         self.base_frame.config(bg='#CCFFFF')
         self.base_frame.pack()
         self.cf = Config()
+        self.tables = self.cf.get_all()
         self.page = page
         self._menu()
         self._button()
         self._page()
 
     def _button(self):
-        tables = self.cf.get_all()
-        table_show = tables[0+((self.page-1) * 15):15+((self.page-1) * 15)]
+        table_show = self.tables[0+((self.page-1) * 15):15+((self.page-1) * 15)]
         button_frame1 = tkinter.Frame(self.base_frame)
         button_frame2 = tkinter.Frame(self.base_frame)
         button_frame3 = tkinter.Frame(self.base_frame)
@@ -59,40 +59,30 @@ class BaseFrame:
         menu2 = tkinter.Menu(menu, tearoff=0)
         menu.add_cascade(label='Set', menu=menu2)
         menu.add_command(label='Refresh', command=self.refresh)
-        menu2.add_command(label='New', command=self.add_spc)
+        menu2.add_command(label='New', command=Dialog)
         menu3 = tkinter.Menu(menu2, tearoff=0)
         menu2.add_cascade(label='Delete', menu=menu3)
-        tables = self.cf.get_all()
-        for i in tables:
-            self.menu3_command(menu3, i)
+        for i in self.tables:
+            menu3.add_command(label=f'{i[1]}({i[0]})', command=lambda: self.del_spc(i))
         self.root.config(menu=menu)
 
     def _page(self):
-        page_frame = tkinter.Frame(self.base_frame)
-        page_frame.pack(side=tkinter.BOTTOM)
-        for i in range(5):
+        self.page_frame = tkinter.Frame(self.root)
+        self.page_frame.pack(side=tkinter.BOTTOM)
+        pages = (len(self.tables)//15) + 1
+        for i in range(pages):
             if i+1 == self.page:
-                self.page_button_click(page_frame, i+1)
+                self.page_button_click(self.page_frame, i+1)
             else:
-                self.page_button(page_frame, i+1)
+                self.page_button(self.page_frame, i+1)
 
     def page_button(self, page_frame, num):
-        page = tkinter.Button(page_frame, text=num, command=lambda:self.change_page(num), width=1, height=1)
+        page = tkinter.Button(page_frame, text=num, command=lambda:self.refresh(num), width=1, height=1)
         page.pack(side=tkinter.LEFT)
 
     def page_button_click(self, page_frame, num):
         page = tkinter.Button(page_frame, text=num, width=1, height=1, relief='sunken')
         page.pack(side=tkinter.LEFT)
-
-    def change_page(self, num):
-        self.base_frame.destroy()
-        BaseFrame(self.root, num)
-
-    def add_spc(self):
-        Dialog()
-
-    def menu3_command(self, menu3, table):
-        menu3.add_command(label=f'{table[1]}({table[0]})', command=lambda: self.del_spc(table))
 
     def del_spc(self, table):
         answer = messagebox.askyesno('确认提示', f'确定删除{table[1]}({table[0]})？')
@@ -110,6 +100,7 @@ class BaseFrame:
         # LineGraphs(self.root, table)
         try:
             self.base_frame.destroy()
+            self.page_frame.destroy()
             LineGraphs(self.root, table)
         except xlrd.biffh.XLRDError:
             messagebox.showerror(title='错误', message=f'Excel文件中并没有表"{table[0]}"')
@@ -118,9 +109,10 @@ class BaseFrame:
             messagebox.showinfo(title='数据出错', message=f'表{table[0]}中的数据不符合格式，请检查')
             self.refresh()
 
-    def refresh(self):
+    def refresh(self, num=1):
         self.base_frame.destroy()
-        BaseFrame(self.root)
+        self.page_frame.destroy()
+        BaseFrame(self.root, num)
 
 
 class Dialog:
@@ -210,7 +202,6 @@ class LineGraphs:
         self.entry.pack()
         btn = tkinter.Button(self.frame_bottom, text='修改线性图名称', command=self.change_name)
         btn.pack()
-        # self.cf.update_value(self.table_id, new_name)
 
     def change_name(self):
         name = self.entry.get()
@@ -281,8 +272,6 @@ class LineGraphs:
     def button(self):
         btn_check = tkinter.Button(self.frame_right, text="检验数据", command=self.checkout, activeforeground='green')
         btn_check.pack()
-        # btn_refresh = tkinter.Button(self.root, text="刷新", command=self.refresh, activeforeground='green')
-        # btn_refresh.pack()
         btn_back = tkinter.Button(self.frame_right, text='返回主窗口', command=self.back)
         btn_back.pack()
 
@@ -577,6 +566,9 @@ class Config:
 
 
 if __name__ == '__main__':
+    # c = Config()
+    # for i in range(50):
+    #     c.update_value(f'sheet_test{i}', f'test{i}')
     root = tkinter.Tk()
     BaseWindow(root)
     root.mainloop()
