@@ -18,7 +18,7 @@ class BaseWindow:
     def __init__(self, root):
         self.root = root
         self.root.config()
-        self.root.geometry("1100x588+450+200")
+        self.root.geometry("1105x588+450+200")
         BaseFrame(self.root)
 
 
@@ -27,7 +27,6 @@ class BaseFrame:
     def __init__(self, root, *type):
         self.root = root
         self.root.config(bg='#CCFFFF')
-        self.root.title('SPC Control')
         self.base_frame = tkinter.Frame(self.root)
         self.base_frame.config(bg='#CCFFFF')
         self.base_frame.pack(fill=tkinter.BOTH)
@@ -37,6 +36,7 @@ class BaseFrame:
             self.type = type[0]
         else:
             self.type = self.types[0]
+        self.root.title(f'SPC Control -- {self.type}')
         self.tables = self.cf.get_data(self.type)
         self._type()
         self._menu()
@@ -77,28 +77,28 @@ class BaseFrame:
         menu.add_cascade(label='View', menu=menu_view)
         menu.add_command(label='Refresh', command=self.refresh)
         # type
-        menu_type.add_command(label='New', command=DialogType)
+        menu_type.add_command(label='New', command=lambda:DialogType(self.root, self.base_frame))
         type_del = tkinter.Menu(menu_type, tearoff=0)
         menu_type.add_cascade(label='Delete', menu=type_del)
         for i in self.types:
-            self._delcommand_type(type_del, i)
+            self._del_command_type(type_del, i)
         # view
-        menu_view.add_command(label='New', command=lambda:DialogTable(self.type))
+        menu_view.add_command(label='New', command=lambda:DialogTable(self.root, self.base_frame, self.type))
         view_del = tkinter.Menu(menu_view, tearoff=0)
         menu_view.add_cascade(label='Delete', menu=view_del)
         for i in self.tables:
-            self._delcommand_view(view_del, i)
+            self._del_command_view(view_del, i)
         self.root.config(menu=menu)
 
-    def _delcommand_type(self, menu, type):
-        menu.add_command(label=f'{type}', command=lambda: self.del_type(type))
+    def _del_command_type(self, menu, type):
+        menu.add_command(label=f'{type}', command=lambda:self.del_type(type))
 
-    def _delcommand_view(self, menu, type):
-        menu.add_command(label=f'{type[1]}({type[0]})', command=lambda: self.del_spc(type))
+    def _del_command_view(self, menu, type):
+        menu.add_command(label=f'{type[1]}({type[0]})', command=lambda:self.del_view(type))
 
     def type_button(self, type_frame, type):
         # flat, groove, raised, ridge, solid, or sunken
-        type_button = tkinter.Button(type_frame, text=type, width=10, command=lambda:self.refresh(type),
+        type_button = tkinter.Button(type_frame, text=type, width=9, command=lambda:self.refresh(type),
                                      relief='ridge', overrelief='groove', activebackground='#ddffee')
         type_button.pack(side=tkinter.LEFT)
 
@@ -107,13 +107,14 @@ class BaseFrame:
         type_button.pack(side=tkinter.LEFT)
 
     def del_type(self, type):
-        answer = messagebox.askyesno('确认提示', f'确定删除类"{type}"')
+        answer = messagebox.askyesno('删除确认', f'确定删除 "{type}" 分类？\n(注意:分类下的所有视图都将被删除)')
         if answer:
             self.cf.remove_type(type)
+            messagebox.showinfo('提示', f'成功删除{type}')
             self.refresh()
 
-    def del_spc(self, table):
-        answer = messagebox.askyesno('确认提示', f'确定删除"{table[1]}({table[0]})"？')
+    def del_view(self, table):
+        answer = messagebox.askyesno('删除确认', f'确定删除 "{table[1]}({table[0]})" ？')
         if answer:
             self.cf.remove(self.type, table[0])
             self.refresh()
@@ -148,11 +149,13 @@ class BaseFrame:
 
 
 class DialogType:
-    def __init__(self):
+    def __init__(self, root, base):
         self.dialog = tkinter.Toplevel()
-        self.dialog.title('新建')
+        self.dialog.title('新建分类')
         self.dialog.geometry("220x80+550+300")
         self.setup_UI()
+        self.root = root
+        self.base_frame = base
 
     def setup_UI(self):
         row1 = tkinter.Frame(self.dialog)
@@ -178,22 +181,29 @@ class DialogType:
         else:
             try:
                 cf.add_type(type)
-                messagebox.showinfo(title='提示', message='创建成功，请刷新')
+                messagebox.showinfo(title='提示', message=f'成功创建分类 "{type}"！\n(提示：如果类别超过15个，部分类别可能会看不到，删除已有的类别才会显示)')
             except:
                 messagebox.showwarning(title='提示', message='创建失败')
         self.dialog.destroy()
+        self.refresh()
 
     def cancel(self):
         self.dialog.destroy()
 
+    def refresh(self):
+        self.base_frame.destroy()
+        BaseFrame(self.root)
+
 
 class DialogTable:
-    def __init__(self, type):
+    def __init__(self, root, base, type):
         self.dialog = tkinter.Toplevel()
-        self.dialog.title('新建')
+        self.dialog.title('添加视图')
         self.dialog.geometry("220x80+550+300")
         self.setup_UI()
         self.type = type
+        self.root = root
+        self.base_frame = base
 
     def setup_UI(self):
         row1 = tkinter.Frame(self.dialog)
@@ -229,13 +239,19 @@ class DialogTable:
             try:
                 cf = Config()
                 cf.update_value(self.type, sheet, name)
-                messagebox.showinfo(title='提示', message='创建成功，请刷新')
+                messagebox.showinfo(title='提示', message=f'在分类 "{self.type}" 中添加"{name}-{sheet}"成功！\n'
+                                                        f'(提示：如果视图超过15个，部分可能会看不到，删减到15个以下才会显示)')
             except:
-                messagebox.showwarning(title='提示', message='创建失败')
+                messagebox.showwarning(title='提示', message='添加失败！！')
         self.dialog.destroy()
+        self.refresh()
 
     def cancel(self):
         self.dialog.destroy()
+
+    def refresh(self):
+        self.base_frame.destroy()
+        BaseFrame(self.root)
 
 
 class LineGraphs:
@@ -288,7 +304,7 @@ class LineGraphs:
             LineGraphs(self.root, self.type, [self.table_key, name])
 
     def frame(self):
-        self.root.title(f'SPC Control - {self.table_name}')
+        self.root.title(f'SPC Control -- {self.type}-{self.table_name}-{self.table_key}')
         self.frame1 = tkinter.Frame(self.root)
         self.frame1.pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
         self.frame_left = tkinter.Frame(self.frame1)
@@ -348,10 +364,6 @@ class LineGraphs:
         btn_check.pack()
         btn_back = tkinter.Button(self.frame_right, text='返回主窗口', command=self.back)
         btn_back.pack()
-
-    def refresh(self):
-        self.frame1.update()
-        print('update')
 
     def label(self):
         lab = tkinter.Label(self.frame_right, text='检验规则', height=2, font='Helvetica -18 bold')
@@ -657,7 +669,8 @@ class Config:
 
 if __name__ == '__main__':
     # c = Config()
-    # for i in range(12):
+    # for i in range(10):
+    #     c.add_type(str(i))
     #     c.update_value('类1', f'sheet_test{i}', f'test{i}')
     #     c.update_value('类4', f'sheet_test{i}', f'test{i}')
     root = tkinter.Tk()
@@ -665,16 +678,8 @@ if __name__ == '__main__':
     root.mainloop()
     # x = Rexcel('Sheet1')
     # print(x.read_value())
-    # c = Config()
-    # a = c.get_all()
-    # print(len(a))
     # cf = Config()
     # print(cf.get_type())
     # print(cf.get_data('类1'))
     # print(cf.get_all_key('类1'))
     # print(cf.get_value('类4', 'Sheet1'))
-    # a = cf.get_all_key()
-    # print(a)
-    # cf.remove(5)
-    # x = Rexcel('Sheet1')
-    # print(x.read_value())
