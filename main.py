@@ -18,81 +18,109 @@ class BaseWindow:
     def __init__(self, root):
         self.root = root
         self.root.config()
-        self.root.geometry("1100x575+450+200")
+        self.root.geometry("1100x588+450+200")
         BaseFrame(self.root)
 
 
 class BaseFrame:
 
-    def __init__(self, root, page=1):
+    def __init__(self, root, *type):
         self.root = root
         self.root.config(bg='#CCFFFF')
         self.root.title('SPC Control')
         self.base_frame = tkinter.Frame(self.root)
         self.base_frame.config(bg='#CCFFFF')
-        self.base_frame.pack()
+        self.base_frame.pack(fill=tkinter.BOTH)
         self.cf = Config()
-        self.tables = self.cf.get_all()
-        self.page = page
+        self.types = self.cf.get_type()
+        if type:
+            self.type = type[0]
+        else:
+            self.type = self.types[0]
+        self.tables = self.cf.get_data(self.type)
+        self._type()
         self._menu()
         self._button()
-        self._page()
+        # self._page()
+
+    def _type(self):
+        types = self.cf.get_type()
+        type_frame = tkinter.Frame(self.base_frame, bg='#CCFFFF', pady=3)
+        type_frame.pack(side=tkinter.TOP, fill=tkinter.BOTH)
+        for type in types:
+            if type == self.type:
+                self.type_button_click(type_frame, type)
+            else:
+                self.type_button(type_frame, type)
 
     def _button(self):
-        table_show = self.tables[0+((self.page-1) * 15):15+((self.page-1) * 15)]
         button_frame1 = tkinter.Frame(self.base_frame)
         button_frame2 = tkinter.Frame(self.base_frame)
         button_frame3 = tkinter.Frame(self.base_frame)
         button_frame1.pack()
         button_frame2.pack()
         button_frame3.pack()
-        for i in range(len(table_show)):
+        for i in range(len(self.tables)):
             if i < 5:
-                self.graph_button(button_frame1, table_show[i])
+                self.graph_button(button_frame1, self.tables[i])
             elif i < 10:
-                self.graph_button(button_frame2, table_show[i])
+                self.graph_button(button_frame2, self.tables[i])
             else:
-                self.graph_button(button_frame3, table_show[i])
+                self.graph_button(button_frame3, self.tables[i])
 
     def _menu(self):
         menu = tkinter.Menu(self.root)
-        menu2 = tkinter.Menu(menu, tearoff=0)
-        menu.add_cascade(label='Set', menu=menu2)
+        menu_view = tkinter.Menu(menu, tearoff=0)
+        menu_type = tkinter.Menu(menu, tearoff=0)
+        # menu
+        menu.add_cascade(label='Type', menu=menu_type)
+        menu.add_cascade(label='View', menu=menu_view)
         menu.add_command(label='Refresh', command=self.refresh)
-        menu2.add_command(label='New', command=Dialog)
-        menu3 = tkinter.Menu(menu2, tearoff=0)
-        menu2.add_cascade(label='Delete', menu=menu3)
+        # type
+        menu_type.add_command(label='New', command=DialogType)
+        type_del = tkinter.Menu(menu_type, tearoff=0)
+        menu_type.add_cascade(label='Delete', menu=type_del)
+        for i in self.types:
+            self._delcommand_type(type_del, i)
+        # view
+        menu_view.add_command(label='New', command=lambda:DialogTable(self.type))
+        view_del = tkinter.Menu(menu_view, tearoff=0)
+        menu_view.add_cascade(label='Delete', menu=view_del)
         for i in self.tables:
-            menu3.add_command(label=f'{i[1]}({i[0]})', command=lambda: self.del_spc(i))
+            self._delcommand_view(view_del, i)
         self.root.config(menu=menu)
 
-    def _page(self):
-        self.page_frame = tkinter.Frame(self.root)
-        self.page_frame.pack(side=tkinter.BOTTOM)
-        pages = (len(self.tables)//15) + 1
-        for i in range(pages):
-            if i+1 == self.page:
-                self.page_button_click(self.page_frame, i+1)
-            else:
-                self.page_button(self.page_frame, i+1)
+    def _delcommand_type(self, menu, type):
+        menu.add_command(label=f'{type}', command=lambda: self.del_type(type))
 
-    def page_button(self, page_frame, num):
-        page = tkinter.Button(page_frame, text=num, command=lambda:self.refresh(num), width=1, height=1)
-        page.pack(side=tkinter.LEFT)
+    def _delcommand_view(self, menu, type):
+        menu.add_command(label=f'{type[1]}({type[0]})', command=lambda: self.del_spc(type))
 
-    def page_button_click(self, page_frame, num):
-        page = tkinter.Button(page_frame, text=num, width=1, height=1, relief='sunken')
-        page.pack(side=tkinter.LEFT)
+    def type_button(self, type_frame, type):
+        # flat, groove, raised, ridge, solid, or sunken
+        type_button = tkinter.Button(type_frame, text=type, width=10, command=lambda:self.refresh(type),
+                                     relief='ridge', overrelief='groove', activebackground='#ddffee')
+        type_button.pack(side=tkinter.LEFT)
+
+    def type_button_click(self, type_frame, type):
+        type_button = tkinter.Button(type_frame, text=type, width=10, relief='sunken', bg='#ddffee')
+        type_button.pack(side=tkinter.LEFT)
+
+    def del_type(self, type):
+        answer = messagebox.askyesno('确认提示', f'确定删除类"{type}"')
+        if answer:
+            self.cf.remove_type(type)
+            self.refresh()
 
     def del_spc(self, table):
-        answer = messagebox.askyesno('确认提示', f'确定删除{table[1]}({table[0]})？')
+        answer = messagebox.askyesno('确认提示', f'确定删除"{table[1]}({table[0]})"？')
         if answer:
-            self.cf.remove(table[0])
+            self.cf.remove(self.type, table[0])
             self.refresh()
 
     def graph_button(self, frame, table):
         btn = tkinter.Button(frame, text=f'{table[1]} ({table[0]})', command=lambda:self.graphs(table), height=10,
-                             width=30, activebackground='#c8c8c8')
+                             width=30, activebackground='#c8c8c8', overrelief='groove')
         btn.pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=1)
 
     def graphs(self, table):
@@ -100,27 +128,72 @@ class BaseFrame:
         # LineGraphs(self.root, table)
         try:
             self.base_frame.destroy()
-            self.page_frame.destroy()
-            LineGraphs(self.root, table)
+            # self.page_frame.destroy()
+            LineGraphs(self.root, self.type, table)
         except xlrd.biffh.XLRDError:
             messagebox.showerror(title='错误', message=f'Excel文件中并没有表"{table[0]}"')
             self.refresh()
         except:
-            messagebox.showinfo(title='数据出错', message=f'表{table[0]}中的数据不符合格式，请检查')
+            messagebox.showinfo(title='数据出错', message=f'表"{table[0]}"中的数据不符合格式，请检查')
             self.refresh()
 
-    def refresh(self, num=1):
+    def refresh(self, *type):
         self.base_frame.destroy()
-        self.page_frame.destroy()
-        BaseFrame(self.root, num)
+        # self.page_frame.destroy()
+        if not type:
+            type = self.type
+        else:
+            type = type[0]
+        BaseFrame(self.root, type)
 
 
-class Dialog:
+class DialogType:
     def __init__(self):
         self.dialog = tkinter.Toplevel()
         self.dialog.title('新建')
         self.dialog.geometry("220x80+550+300")
         self.setup_UI()
+
+    def setup_UI(self):
+        row1 = tkinter.Frame(self.dialog)
+        row1.pack(fill="x")
+        tkinter.Label(row1, text='Type：', width=8).pack(side=tkinter.LEFT)
+        self.type = tkinter.StringVar()
+        # self.sheet.set('Type')
+        tkinter.Entry(row1, textvariable=self.type, width=20).pack(side=tkinter.LEFT)
+
+        row2 = tkinter.Frame(self.dialog)
+        row2.pack()
+        tkinter.Button(row2, text="确定", command=self.ok).pack(side=tkinter.LEFT)
+        tkinter.Button(row2, text="取消", command=self.cancel).pack(side=tkinter.LEFT)
+
+    def ok(self):
+        type = self.type.get()
+        cf = Config()
+        types = cf.get_type()
+        if type == '':
+            messagebox.showinfo(title='提示', message='不能为空')
+        elif type in types:
+            messagebox.showinfo(title='提示', message=f'"{type}" 已存在')
+        else:
+            try:
+                cf.add_type(type)
+                messagebox.showinfo(title='提示', message='创建成功，请刷新')
+            except:
+                messagebox.showwarning(title='提示', message='创建失败')
+        self.dialog.destroy()
+
+    def cancel(self):
+        self.dialog.destroy()
+
+
+class DialogTable:
+    def __init__(self, type):
+        self.dialog = tkinter.Toplevel()
+        self.dialog.title('新建')
+        self.dialog.geometry("220x80+550+300")
+        self.setup_UI()
+        self.type = type
 
     def setup_UI(self):
         row1 = tkinter.Frame(self.dialog)
@@ -146,16 +219,16 @@ class Dialog:
         sheet = self.sheet.get()
         name = self.name.get()
         cf = Config()
-        sheets = cf.get_all_key()
+        sheets = cf.get_all_key(self.type)
         if sheet == '' or name == '':
             messagebox.showinfo(title='提示', message='不能为空')
         elif sheet in sheets:
-            name = cf.get_value(sheet)
-            messagebox.showinfo(title='提示', message=f'{sheet}已存在于{name}')
+            name = cf.get_value(self.type, sheet)
+            messagebox.showinfo(title='提示', message=f'"{sheet}" 已存在于 "{name}"')
         else:
             try:
                 cf = Config()
-                cf.update_value(sheet, name)
+                cf.update_value(self.type, sheet, name)
                 messagebox.showinfo(title='提示', message='创建成功，请刷新')
             except:
                 messagebox.showwarning(title='提示', message='创建失败')
@@ -166,10 +239,11 @@ class Dialog:
 
 
 class LineGraphs:
-    def __init__(self, root, table):
+    def __init__(self, root, type, table):
         self.root = root
         self.root.config(menu='')
         self.cf = Config()
+        self.type = type
         self.table_key = table[0]
         self.table_name = table[1]
         self._get_data()
@@ -192,10 +266,10 @@ class LineGraphs:
 
     def back(self):
         self.frame1.destroy()
-        BaseFrame(self.root)
+        BaseFrame(self.root, self.type)
 
     def get_table_name(self):
-        return self.cf.get_value(self.table_key)
+        return self.cf.get_value(self.type, self.table_key)
 
     def entry_button(self):
         self.entry = tkinter.Entry(self.frame_bottom, show='')
@@ -207,11 +281,11 @@ class LineGraphs:
         name = self.entry.get()
         if name == '':
             return
-        answer = messagebox.askyesno(title='修改名称', message=f'确定修改线性图的名称为"{name}"？')
+        answer = messagebox.askyesno(title='修改名称', message=f'确定修改线性图的名称为 "{name}"？')
         if answer:
-            self.cf.update_value(self.table_key, name)
+            self.cf.update_value(self.type, self.table_key, name)
             self.frame1.destroy()
-            LineGraphs(self.root, [self.table_key, name])
+            LineGraphs(self.root, self.type, [self.table_key, name])
 
     def frame(self):
         self.root.title(f'SPC Control - {self.table_name}')
@@ -544,31 +618,48 @@ class Config:
         self.cf = NewConfigParser(allow_no_value=True)
         self.cf.read('config.ini')
 
+    def add_type(self, type):
+        self.cf.add_section(type)
+        self.save()
+
+    def update_value(self, type, key, value):
+        self.cf.set(type, key, value)
+        self.save()
+
     def get_excel(self):
         return self.cf.get('File', 'Excel')
 
-    def get_value(self, key):
-        return self.cf.get('Button', key)
+    def get_value(self, type, key):
+        return self.cf.get(type, key)
 
-    def update_value(self, key, value):
-        self.cf.set('Button', key, value)
+    def get_type(self):
+        types = self.cf.sections()
+        types.remove('File')
+        return types
+
+    def get_data(self, type):
+        return self.cf.items(type)
+
+    def get_all_key(self, type):
+        return self.cf.options(type)
+
+    def remove(self, type, key):
+        self.cf.remove_option(type, key)
+        self.save()
+
+    def remove_type(self, type):
+        self.cf.remove_section(type)
+        self.save()
+
+    def save(self):
         self.cf.write(open('config.ini', 'w'))
-
-    def remove(self, key):
-        self.cf.remove_option('Button', key)
-        self.cf.write(open('config.ini', 'w'))
-
-    def get_all(self):
-        return self.cf.items('Button')
-
-    def get_all_key(self):
-        return self.cf.options('Button')
 
 
 if __name__ == '__main__':
     # c = Config()
-    # for i in range(50):
-    #     c.update_value(f'sheet_test{i}', f'test{i}')
+    # for i in range(12):
+    #     c.update_value('类1', f'sheet_test{i}', f'test{i}')
+    #     c.update_value('类4', f'sheet_test{i}', f'test{i}')
     root = tkinter.Tk()
     BaseWindow(root)
     root.mainloop()
@@ -578,7 +669,10 @@ if __name__ == '__main__':
     # a = c.get_all()
     # print(len(a))
     # cf = Config()
-    # cf.update_value(5, 'eee')
+    # print(cf.get_type())
+    # print(cf.get_data('类1'))
+    # print(cf.get_all_key('类1'))
+    # print(cf.get_value('类4', 'Sheet1'))
     # a = cf.get_all_key()
     # print(a)
     # cf.remove(5)
