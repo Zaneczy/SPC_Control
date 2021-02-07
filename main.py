@@ -99,11 +99,11 @@ class BaseFrame:
     def type_button(self, type_frame, type):
         # flat, groove, raised, ridge, solid, or sunken
         type_button = tkinter.Button(type_frame, text=type, width=9, command=lambda:self.refresh(type),
-                                     relief='ridge', overrelief='groove', activebackground='#ddffee')
+                                     relief='ridge', overrelief='groove', activebackground='#aaffee', bg='#eeffee')
         type_button.pack(side=tkinter.LEFT)
 
     def type_button_click(self, type_frame, type):
-        type_button = tkinter.Button(type_frame, text=type, width=10, relief='sunken', bg='#ddffee')
+        type_button = tkinter.Button(type_frame, text=type, width=10, relief='sunken', bg='#aaffee')
         type_button.pack(side=tkinter.LEFT)
 
     def del_type(self, type):
@@ -126,7 +126,7 @@ class BaseFrame:
 
     def graphs(self, table):
         # self.base_frame.destroy()
-        # LineGraphs(self.root, table)
+        # LineGraphs(self.root, self.type, table)
         try:
             self.base_frame.destroy()
             # self.page_frame.destroy()
@@ -309,10 +309,10 @@ class LineGraphs:
         self.frame1.pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
         self.frame_left = tkinter.Frame(self.frame1)
         self.frame_left.pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=1)
-        self.frame_right = tkinter.Frame(self.frame1)
+        self.frame_right = tkinter.Frame(self.frame1, bg='#DDFFFF')
         self.frame_right.pack(side=tkinter.RIGHT, fill=tkinter.BOTH, expand=1)
 
-        self.frame_bottom = tkinter.Frame(self.frame_right)
+        self.frame_bottom = tkinter.Frame(self.frame_right, bg='#DDFFFF')
         self.frame_bottom.pack(side=tkinter.BOTTOM)
 
     def draw_plt(self):
@@ -366,7 +366,7 @@ class LineGraphs:
         btn_back.pack()
 
     def label(self):
-        lab = tkinter.Label(self.frame_right, text='检验规则', height=2, font='Helvetica -18 bold')
+        lab = tkinter.Label(self.frame_right, text='检验规则', height=2, font='Helvetica -18 bold', bg='#DDFFFF')
         lab.pack(side=tkinter.TOP)
 
     def checkout_button(self):
@@ -382,9 +382,9 @@ class LineGraphs:
         for i in range(8):
             self.var_list.append(tkinter.IntVar())
         for i in range(len(self.var_list)):
-            frame_x = tkinter.Frame(self.frame_right)
+            frame_x = tkinter.Frame(self.frame_right, bg='#DDFFFF')
             frame_x.pack(side=tkinter.TOP, fill=tkinter.BOTH)
-            cb = tkinter.Checkbutton(frame_x, text=rule_list[i], variable=self.var_list[i])
+            cb = tkinter.Checkbutton(frame_x, text=rule_list[i], variable=self.var_list[i], bg='#DDFFFF')
             cb.pack(side=tkinter.LEFT, expand=0)
 
     def checkout(self):
